@@ -354,29 +354,30 @@ function drawRayCastedImage(context){
     var w = context.canvas.width;
     var h = context.canvas.height;
     var d = w;
-    var c = new Color(0,0,0,0);
-    var n = inputTriangles.length;
-    //console.log(w);
-    //console.log(h);
     var imagedata = context.createImageData(w,h);
 
-    var windowSquarePosition = [0, 0, 0];
-    var windowSize = [1,1];
-    var windowSizeCanvas = [w*windowSize[0], h*windowSize[1]];
-    //console.log(windowSizeCanvas);
-    var eyePosition = [0.5, 0.5, -0.5];
-    var eyePositionCanvas = [w*eyePosition[0], h*eyePosition[1], d*eyePosition[2]];
-    //console.log(eyePositionCanvas);
-
     if (inputTriangles != String.null) {
+      var c = new Color(0,0,0,0);
+      var n = inputTriangles.length;
+
+      var windowSquarePosition = [0, 0, 0];
+      var windowSize = [1,1];
+      var windowSizeCanvas = [w*windowSize[0], h*windowSize[1]];
+      //console.log(windowSizeCanvas);
+      var eyePosition = [0.5, 0.5, -0.5];
+      var eyePositionCanvas = [w*eyePosition[0], h*eyePosition[1], d*eyePosition[2]];
+      //console.log(eyePositionCanvas);
       var windowZ = 0;
       for(var windowX = 0; windowX < windowSizeCanvas[0]; windowX++){
         for(var windowY = 0; windowY < windowSizeCanvas[1]; windowY++){
+          c.change(Math.random()*255,Math.random()*255,Math.random()*255,255);
+          drawPixel(imagedata, windowX, windowY, c);
+          context.putImageData(imagedata, 0, 0);
+
           //console.log(windowX + ", " + windowY + ", " + windowZ);
           //Get ray equation from eyePositionCanvas and windowX, windowY, windowZ
           var rayVector = [windowX - eyePositionCanvas[0], windowY - eyePositionCanvas[1], windowZ - eyePositionCanvas[2]];
-          //console.log(rayVector);
-
+          //console.log(rayVector[0] + ", " + rayVector[1]);
           //FILE LOOP
           for (var f=0; f<n; f++) {
             var tn = inputTriangles[f].triangles.length;
@@ -387,6 +388,7 @@ function drawRayCastedImage(context){
                 255);
             //TRIANGLE LOOP
             for(var t=0; t<tn; t++){
+              // console.log(f + " + " + t);
               //GET VERTEX INDICES
               var vertex1 = inputTriangles[f].triangles[t][0];
               var vertex2 = inputTriangles[f].triangles[t][1];
@@ -400,7 +402,6 @@ function drawRayCastedImage(context){
               vertexPos1 = [w*vertexPos1[0], h*vertexPos1[1], d*vertexPos1[2]];
           		vertexPos2 = [w*vertexPos2[0], h*vertexPos2[1], d*vertexPos2[2]];
           		vertexPos3 = [w*vertexPos3[0], h*vertexPos3[1], d*vertexPos3[2]];
-
               //FIND EQUATIONS OF TWO LINES USING THREE POINTS
               var line1 = [vertexPos2[0] - vertexPos1[0], vertexPos2[1] - vertexPos1[1], vertexPos2[2] - vertexPos1[2]];
               var line2 = [vertexPos3[0] - vertexPos2[0], vertexPos3[1] - vertexPos2[1], vertexPos3[2] - vertexPos2[2]];
@@ -410,24 +411,27 @@ function drawRayCastedImage(context){
 
               //COMPUTE INTERSECTION OF PLANE AND LINE
               //A, B, C
-              var planeA = normal[0];
-              var planeB = normal[1];
-              var planeC = normal[2];
-
+              //.toFixed rounds it to 2 decimal places
+              var planeA = normal[0].toFixed(2);
+              var planeB = normal[1].toFixed(2);
+              var planeC = normal[2].toFixed(2);
               //d = Ax1 + By1 + Cz1
               var planeD = planeA*vertexPos1[0] + planeB*vertexPos1[1] + planeC*vertexPos1[2];
+              planeD = planeD.toFixed(2);
 
               var numerator = planeD - (planeA*eyePositionCanvas[0] + planeB*eyePositionCanvas[1] + planeC*eyePositionCanvas[2]);
               var denominator = planeA*(windowX - eyePositionCanvas[0]) + planeB*(windowY - eyePositionCanvas[1]) + planeC*(windowZ - eyePositionCanvas[1]);
 
               //HANDLE 0/0 FORM
-              var t = numerator/denominator;
+              var lineT = numerator/denominator;
+              console.log(lineT);
+              //console.log(windowX + ", " + windowY);
 
               //INTERSECTION POINT
-              var intersectionX = eyePositionCanvas[0] + (windowX - eyePositionCanvas[0])*t;
-              var intersectionY = eyePositionCanvas[1] + (windowY - eyePositionCanvas[1])*t;
-              var intersectionZ = eyePositionCanvas[2] + (windowZ - eyePositionCanvas[2])*t;
-
+              var intersectionX = eyePositionCanvas[0] + (windowX - eyePositionCanvas[0])*lineT;
+              var intersectionY = eyePositionCanvas[1] + (windowY - eyePositionCanvas[1])*lineT;
+              var intersectionZ = eyePositionCanvas[2] + (windowZ - eyePositionCanvas[2])*lineT;
+              //console.log(intersectionX + " " + intersectionY + " " + intersectionZ);
 
               //MAKE SURE WINDOW IS BETWEEN TRIANGLE AND EYE
 
@@ -435,60 +439,76 @@ function drawRayCastedImage(context){
               //Check if intersection is inside triangle
               //We compute area of the three triangles formed and check if it equals the area of the original triangle
 
+              //v1v2intersection
+              var vectorV1Intersection = [intersectionX - vertexPos1[0], intersectionY - vertexPos1[1], intersectionZ - vertexPos1[2]];
+              var vectorV2Intersection = [intersectionX - vertexPos2[0], intersectionY - vertexPos2[1], intersectionZ - vertexPos2[2]];
+              var area1 = areaOfTriangle(vectorV1Intersection[0], vectorV1Intersection[1], vectorV1Intersection[2], vectorV2Intersection[0], vectorV2Intersection[1], vectorV2Intersection[2]);
 
-              drawPixel(imagedata,point[0],point[1],c);
+              //v2v3intersection
+              var vectorV2Intersection = [intersectionX - vertexPos2[0], intersectionY - vertexPos2[1], intersectionZ - vertexPos2[2]];
+              var vectorV3Intersection = [intersectionX - vertexPos3[0], intersectionY - vertexPos3[1], intersectionZ - vertexPos3[2]];
+              var area2 = areaOfTriangle(vectorV2Intersection[0], vectorV2Intersection[1], vectorV2Intersection[2], vectorV3Intersection[0], vectorV3Intersection[1], vectorV3Intersection[2]);
 
+              //v3v1intersection
+              var vectorV3Intersection = [intersectionX - vertexPos3[0], intersectionY - vertexPos3[1], intersectionZ - vertexPos3[2]];
+              var vectorV1Intersection = [intersectionX - vertexPos1[0], intersectionY - vertexPos1[1], intersectionZ - vertexPos1[2]];
+              var area3 = areaOfTriangle(vectorV3Intersection[0], vectorV3Intersection[1], vectorV3Intersection[2], vectorV1Intersection[0], vectorV1Intersection[1], vectorV1Intersection[2]);
 
+              //v1v2v3
+              var vectorV1V2 = [vertexPos2[0] - vertexPos1[0], vertexPos2[1] - vertexPos1[1], vertexPos2[2] - vertexPos1[2]];
+              var vectorV1V3 = [vertexPos3[0] - vertexPos1[0], vertexPos3[1] - vertexPos1[1], vertexPos3[2] - vertexPos1[2]];
+              var areaFinal = areaOfTriangle(vectorV1V2[0], vectorV1V2[1], vectorV1V2[2], vectorV1V3[0], vectorV1V3[1], vectorV1V3[2]);
 
-
-
+              //Point is inside if areaFinal is equal to sum of other areas
+              var sum = area1 + area2 + area3;
+              //console.log(areaFinal);
+              //console.log(sum);
+              if(area1 + area2 + area3 == areaFinal){
+                console.log("yes");
+              }else{
+                //console.log("Nah");
+              }
+              //drawPixel(imagedata,point[0],point[1],c);
             }
           }
           context.putImageData(imagedata, 0, 0);
-          /*
-          FOR ALL TRIANGLES IN WORLD
-            FIND PLANE OF TRIANGLE
-            FIND IF RAY INTERSECTS PLANE
-              FIND POINT OF INTERSECTION
-              FIND IF WINDOW IS BETWEEN POINT AND EYE
-                FIND IF POINT INSIDE TRIANGLE
-                  FIND IF ITS THE CLOSEST SO FAR TO EYE
-                    REGISTER COLOR AT windowpoint x,y,z
-
-
-          */
         }
       }
-
-
     }
 }
-/* main -- here is where execution begins after window load */
 
 //Pass two vectors AB AC from triangle ABC and return area of said triangle
 function areaOfTriangle(x1, y1, z1, x2, y2, z2){
     return 0.5*(Math.sqrt(Math.pow((y1*z2 - z1*y2), 2) + Math.pow((z1*x2 - x1*z2), 2) + Math.pow((x1*y2 - y1*x2), 2)));
 }
+function lineDraw(context){
+  var c = new Color(245,120,120,120);
+  var imagedata = context.createImageData(1024,1024);
+  for(var x = 0; x < 1000; x ++){
+    for(var y = 0; y < 1000; y++){
+      //c.change(Math.random()*255,Math.random()*255,Math.random()*255,255);
+        drawPixel(imagedata, x, y, c);
+      //console.log(x);
+    }
+  }
+  context.putImageData(imagedata, 0, 0);
+}
 function main() {
-
     // Get the canvas and context
     var canvas = document.getElementById("viewport");
     var context = canvas.getContext("2d");
-
     // Create the image
     //drawRandPixels(context);
       // shows how to draw pixels
-
     //drawRandPixelsInInputEllipsoids(context);
       // shows how to draw pixels and read input file
-
     //drawInputEllipsoidsUsingArcs(context);
       // shows how to read input file, but not how to draw pixels
-
     //drawRandPixelsInInputTriangles(context);
     // shows how to draw pixels and read input file
     //console.log(areaOfTriangle(0,3,0,3,0,0));
     drawRayCastedImage(context);
+    //lineDraw(context);
     //drawInputTrainglesUsingPaths(context);
     // shows how to read input file, but not how to draw pixels
 }
